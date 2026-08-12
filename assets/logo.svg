@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="plata" x1="0.1" y1="0" x2="0.45" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.30" stop-color="#e9e9e9"/>
+      <stop offset="0.52" stop-color="#9d9d9d"/>
+      <stop offset="0.72" stop-color="#dcdcdc"/>
+      <stop offset="1" stop-color="#8c8c8c"/>
+    </linearGradient>
+    <linearGradient id="naranja" x1="0.1" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#ffa04a"/>
+      <stop offset="0.45" stop-color="#f87c14"/>
+      <stop offset="1" stop-color="#dd5f05"/>
+    </linearGradient>
+  </defs>
+
+  <g fill="none" stroke="#f87c14" stroke-width="8" stroke-linecap="round">
+    <path d="M64.3,215.2 A196,196 0 0 1 447.7,215.2"/>
+    <path d="M64.3,296.8 A196,196 0 0 0 447.7,296.8"/>
+  </g>
+
+  <path fill="url(#plata)" stroke="#131313" stroke-width="7" stroke-linejoin="round"
+        d="M95,148 L352,148 L205,296 L352,296 L352,362 L95,362 L242,214 L95,214 Z"/>
+
+  <path fill="url(#naranja)" fill-rule="evenodd" paint-order="stroke"
+        stroke="#131313" stroke-width="11" stroke-linejoin="round"
+        d="M312,205 H398 C444,205 472,233 472,267 C472,297 450,319 422,325 L480,405 H408 L372,338 V405 H312 Z
+           M372,245 H406 C429,245 439,254 439,268 C439,282 429,291 406,291 H372 Z"/>
+</svg>
