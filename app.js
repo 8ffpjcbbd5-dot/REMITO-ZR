@@ -5,6 +5,10 @@
 (function () {
   "use strict";
 
+  // Se muestra al pie de la pantalla. Sirve para saber de un vistazo qué
+  // versión está corriendo el teléfono. Subila junto con VERSION en sw.js.
+  var VERSION_APP = "4";
+
   // ---------------------------------------------------------------- utilidades
 
   function $(id) { return document.getElementById(id); }
@@ -613,9 +617,25 @@
     avisar("El catálogo no cargó. Podés usar “Producto libre” o recargar la app.", true);
   }
 
+  $("version").textContent = "versión " + VERSION_APP;
+  window.ZR.version = VERSION_APP;
+
   if ("serviceWorker" in navigator) {
+    // Si ya había un service worker controlando la página y aparece uno nuevo,
+    // significa que se publicó una versión nueva: se recarga una sola vez para
+    // que el teléfono no siga mostrando la vieja.
+    var teniaControlador = !!navigator.serviceWorker.controller;
+    var yaRecargue = false;
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (!teniaControlador || yaRecargue) return;
+      yaRecargue = true;
+      location.reload();
+    });
+
     window.addEventListener("load", function () {
-      navigator.serviceWorker.register("sw.js").catch(function () {});
+      navigator.serviceWorker.register("sw.js").then(function (reg) {
+        reg.update();
+      }).catch(function () {});
     });
   }
 })();
