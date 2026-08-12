@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Remitos Zona Race</title>
+<meta name="theme-color" content="#0e0e0e">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="assets/icon-192.png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<style>
+  :root{
+    --bg:#0e0e0e;
+    --surface:#181818;
+    --surface-2:#212121;
+    --border:#2e2e2e;
+    --text:#f3f3f3;
+    --muted:#9b9b9b;
+    --naranja:#f87c14;
+    --naranja-osc:#dd5f05;
+    --error:#ff5a4d;
+    --radio:12px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    font-size:16px;
+    line-height:1.4;
+    -webkit-text-size-adjust:100%;
+    padding-bottom:calc(96px + env(safe-area-inset-bottom));
+  }
+
+  header{
+    display:flex;align-items:center;gap:12px;
+    padding:calc(14px + env(safe-area-inset-top)) 16px 14px;
+    background:linear-gradient(180deg,#161616,#0e0e0e);
+    border-bottom:1px solid var(--border);
+    position:sticky;top:0;z-index:5;
+  }
+  header img{width:44px;height:44px;flex:0 0 auto}
+  header .marca{font-weight:800;letter-spacing:.5px;font-size:19px;line-height:1.1}
+  header .eslogan{color:var(--muted);font-size:12px;letter-spacing:2px;text-transform:uppercase}
+
+  main{padding:16px;max-width:720px;margin:0 auto}
+
+  .seccion{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radio);
+    padding:14px;
+    margin-bottom:16px;
+  }
+  .seccion > h2{
+    margin:0 0 12px;
+    font-size:12px;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted);
+    font-weight:700;
+  }
+
+  label{display:block;font-size:13px;color:var(--muted);margin:0 0 6px}
+  .campo{margin-bottom:12px}
+  .campo:last-child{margin-bottom:0}
+
+  input,select{
+    width:100%;
+    background:var(--surface-2);
+    color:var(--text);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:12px;
+    font-size:16px;
+    font-family:inherit;
+    appearance:none;
+  }
+  select{
+    background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%239b9b9b'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;
+    background-position:right 8px center;
+    background-size:22px;
+    padding-right:34px;
+  }
+  input:focus,select:focus{outline:2px solid var(--naranja);outline-offset:1px;border-color:var(--naranja)}
+  input[readonly]{background:#141414;color:var(--muted)}
+  input.invalido{border-color:var(--error)}
+
+  /* --- líneas de producto --- */
+  .linea{
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:var(--radio);
+    padding:12px;
+    margin-bottom:12px;
+  }
+  .linea-top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .linea-top .n{
+    flex:0 0 auto;width:26px;height:26px;border-radius:50%;
+    background:var(--naranja);color:#111;font-weight:800;font-size:13px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .linea-top .titulo{flex:1;min-width:0;font-size:13px;color:var(--muted);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .quitar{
+    flex:0 0 auto;
+    background:transparent;border:1px solid var(--border);color:var(--muted);
+    border-radius:8px;padding:6px 10px;font-size:13px;font-family:inherit;
+  }
+  .quitar:active{background:#2b1a12;color:var(--error);border-color:var(--error)}
+  .grid-3{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .grid-3 .ancho{grid-column:1 / -1}
+
+  .btn{
+    width:100%;
+    border:none;border-radius:12px;
+    padding:14px;
+    font-size:16px;font-weight:700;font-family:inherit;
+    color:#fff;
+  }
+  .btn-sec{
+    background:transparent;border:1px dashed #444;color:var(--naranja);font-weight:600;
+  }
+  .btn-sec:active{background:#1d1409}
+
+  /* --- barra inferior --- */
+  .barra{
+    position:fixed;left:0;right:0;bottom:0;z-index:10;
+    background:rgba(14,14,14,.96);
+    backdrop-filter:blur(8px);
+    border-top:1px solid var(--border);
+    padding:10px 16px calc(10px + env(safe-area-inset-bottom));
+  }
+  .barra-inner{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:12px}
+  .total-wrap{flex:1;min-width:0}
+  .total-lbl{font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted)}
+  .total-val{font-size:22px;font-weight:800;color:var(--naranja);line-height:1.1;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #btnGenerar{
+    flex:0 0 auto;width:auto;
+    background:linear-gradient(180deg,var(--naranja),var(--naranja-osc));
+    box-shadow:0 2px 10px rgba(248,124,20,.25);
+    padding:14px 18px;color:#1a1004;
+  }
+  #btnGenerar:disabled{opacity:.6}
+
+  /* --- aviso --- */
+  #aviso{
+    position:fixed;left:50%;transform:translateX(-50%);
+    bottom:calc(96px + env(safe-area-inset-bottom));
+    z-index:20;
+    max-width:calc(100% - 32px);
+    background:#2a2a2a;border:1px solid var(--border);
+    color:var(--text);
+    padding:12px 16px;border-radius:10px;
+    font-size:14px;text-align:center;
+    box-shadow:0 6px 24px rgba(0,0,0,.5);
+    opacity:0;pointer-events:none;transition:opacity .18s;
+  }
+  #aviso.visible{opacity:1}
+  #aviso.error{border-color:var(--error)}
+
+  .nota{color:var(--muted);font-size:12px;margin:14px 4px 0;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <img id="logo" src="assets/logo.png" alt="Zona Race">
+  <div>
+    <div class="marca">ZONA RACE</div>
+    <div class="eslogan">Remitos</div>
+  </div>
+</header>
+
+<main>
+  <section class="seccion">
+    <h2>Datos del remito</h2>
+    <div class="campo">
+      <label for="fecha">Fecha</label>
+      <input id="fecha" type="text" autocomplete="off" placeholder="Ej: 12/08/2026">
+    </div>
+    <div class="campo">
+      <label for="cliente">Nombre del cliente</label>
+      <input id="cliente" type="text" autocomplete="off" placeholder="Ej: Juan Pérez">
+    </div>
+    <div class="campo">
+      <label for="direccion">Dirección de envío</label>
+      <input id="direccion" type="text" autocomplete="off" placeholder="Ej: Av. Siempreviva 742, Piso 3">
+    </div>
+    <div class="campo">
+      <label for="receptor">Persona a la que se entrega</label>
+      <input id="receptor" type="text" autocomplete="off" placeholder="Ej: María López">
+    </div>
+  </section>
+
+  <section class="seccion">
+    <h2>Productos</h2>
+    <div id="lineas"></div>
+    <button type="button" class="btn btn-sec" id="btnAgregar">+ Agregar producto</button>
+  </section>
+
+  <p class="nota">
+    Se generan dos PDF: uno para el cliente (con espacio de firma) y uno interno.
+    No se guarda nada en el teléfono.
+  </p>
+</main>
+
+<div class="barra">
+  <div class="barra-inner">
+    <div class="total-wrap">
+      <div class="total-lbl">Total</div>
+      <div class="total-val" id="total">$ 0,00</div>
+    </div>
+    <button type="button" class="btn" id="btnGenerar">Generar remitos</button>
+  </div>
+</div>
+
+<div id="aviso" role="status" aria-live="polite"></div>
+
+<script src="vendor/jspdf.umd.min.js"></script>
+<script src="catalogo.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

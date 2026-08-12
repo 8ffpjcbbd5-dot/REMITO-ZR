@@ -1,0 +1,33 @@
+{
+  "name": "Remitos Zona Race",
+  "short_name": "Remitos ZR",
+  "description": "Generador de remitos de Zona Race. Funciona 100% en el teléfono, sin internet.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0e0e0e",
+  "theme_color": "#0e0e0e",
+  "lang": "es-AR",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
