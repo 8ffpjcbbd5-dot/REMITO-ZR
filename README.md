@@ -47,15 +47,23 @@ npx http-server -p 8123
 Todo el catálogo está en **`catalogo.js`**, en una lista fácil de tocar a mano:
 
 ```js
-{ nombre: "Filtro de aceite", precioUnitario: 9800 },
+{ codigo: "R9", nombre: "Base R9 V3 Direct Drive Wheel Base", precioUnitario: 837807 },
 ```
 
 El precio va sin `$`, sin puntos de miles y con punto decimal (`12345.50`). El
-orden de la lista es el orden del desplegable.
+orden de la lista es el orden del desplegable. El `codigo` es de referencia
+interna: la app y el remito muestran `nombre` y `precioUnitario`.
 
 **Importante:** después de cambiar cualquier archivo de la app, subí el número de
-`VERSION` en `sw.js` (`zr-remitos-v1` → `zr-remitos-v2`). Si no, los teléfonos que
-ya la tienen instalada siguen usando la versión vieja del caché.
+`VERSION` en `sw.js` y el de `VERSION_APP` en `app.js` (los dos juntos). El
+segundo es el que se ve al pie de la pantalla: sirve para confirmar de un vistazo
+qué versión está corriendo un teléfono.
+
+Los archivos de la app se piden primero a la red, así que un cambio de precios
+llega con abrir la app; el número de versión al pie te dice si el teléfono ya lo
+tomó. Si quedó pegada una versión vieja, en el navegador: borrar los datos del
+sitio; si está instalada como app, sacarla de la pantalla de inicio y volver a
+agregarla.
 
 ## Cambiar el logo
 

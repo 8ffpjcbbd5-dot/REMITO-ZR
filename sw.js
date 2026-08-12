@@ -4,10 +4,17 @@
  * No cachea ni guarda ningún remito: los PDF se arman en el momento y no se
  * escriben en ningún lado.
  *
- * Si cambiás algún archivo de la app (por ejemplo catalogo.js), subí el número
- * de VERSION para que los teléfonos ya instalados se actualicen.
+ * Estrategia:
+ *   - Los archivos de la app (index.html, app.js, catalogo.js, manifest.json)
+ *     se piden PRIMERO a la red y se cae al caché sólo si no hay señal. Así una
+ *     actualización de precios llega al toque y nunca queda una versión vieja
+ *     pegada en el teléfono.
+ *   - El resto (librería de PDF, logo, íconos) va del caché primero, porque no
+ *     cambia salvo que se suba la VERSION.
+ *
+ * Si cambiás algún archivo de la app, subí VERSION acá y VERSION_APP en app.js.
  */
-var VERSION = "zr-remitos-v1";
+var VERSION = "zr-remitos-v4";
 
 var ARCHIVOS = [
   "./",
@@ -20,6 +27,8 @@ var ARCHIVOS = [
   "./assets/icon-192.png",
   "./assets/icon-512.png",
 ];
+
+var DE_LA_APP = /(^|\/)(index\.html|app\.js|catalogo\.js|manifest\.json)$/;
 
 self.addEventListener("install", function (e) {
   e.waitUntil(
@@ -45,25 +54,51 @@ self.addEventListener("activate", function (e) {
   );
 });
 
-// Cache primero: la app abre igual de rápido con o sin señal.
+function guardar(request, respuesta) {
+  if (respuesta && respuesta.ok && respuesta.type === "basic") {
+    var copia = respuesta.clone();
+    caches.open(VERSION).then(function (cache) { cache.put(request, copia); });
+  }
+  return respuesta;
+}
+
+// ignoreSearch: los reintentos de carga piden "archivo.js?reintento=123";
+// sin esto no encontrarían la copia en caché y fallarían sin conexión.
+function delCache(request) {
+  return caches.match(request, { ignoreSearch: true });
+}
+
 self.addEventListener("fetch", function (e) {
   if (e.request.method !== "GET") return;
 
-  e.respondWith(
-    caches.match(e.request).then(function (hit) {
-      if (hit) return hit;
-      return fetch(e.request).then(function (res) {
-        // Guardamos copia de lo que sea de la propia app.
-        if (res && res.ok && res.type === "basic") {
-          var copia = res.clone();
-          caches.open(VERSION).then(function (cache) {
-            cache.put(e.request, copia);
-          });
-        }
-        return res;
+  var url;
+  try { url = new URL(e.request.url); } catch (err) { return; }
+  if (url.origin !== self.location.origin) return;
+
+  var esApp = e.request.mode === "navigate" ||
+    DE_LA_APP.test(url.pathname) ||
+    url.pathname === self.registration.scope.replace(self.location.origin, "");
+
+  if (esApp) {
+    // Red primero: la versión publicada manda.
+    e.respondWith(
+      fetch(e.request).then(function (res) {
+        return guardar(e.request, res);
       }).catch(function () {
-        // Sin conexión y sin caché: si es una navegación, devolvemos la app.
-        if (e.request.mode === "navigate") return caches.match("./index.html");
+        return delCache(e.request).then(function (hit) {
+          return hit || caches.match("./index.html");
+        });
+      })
+    );
+    return;
+  }
+
+  // Resto: caché primero, y si no está se busca y se guarda.
+  e.respondWith(
+    delCache(e.request).then(function (hit) {
+      return hit || fetch(e.request).then(function (res) {
+        return guardar(e.request, res);
+      }).catch(function () {
         return Response.error();
       });
     })

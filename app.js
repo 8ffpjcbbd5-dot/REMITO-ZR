@@ -5,11 +5,50 @@
 (function () {
   "use strict";
 
-  var jsPDF = window.jspdf.jsPDF;
+  // Se muestra al pie de la pantalla. Sirve para saber de un vistazo qué
+  // versión está corriendo el teléfono. Subila junto con VERSION en sw.js.
+  var VERSION_APP = "4";
 
   // ---------------------------------------------------------------- utilidades
 
   function $(id) { return document.getElementById(id); }
+
+  // jsPDF y el catálogo se buscan cuando hacen falta, nunca al arrancar: si uno
+  // de esos archivos no llegó a bajar (señal mala, por ejemplo), el formulario
+  // tiene que seguir funcionando igual.
+  function obtenerJsPDF() {
+    return (window.jspdf && window.jspdf.jsPDF) || null;
+  }
+
+  // Lee el catálogo aguantando las formas más comunes de pegarlo: la lista puede
+  // llamarse CATALOGO, catalogo o PRODUCTOS, y el precio puede venir como
+  // precioUnitario o precio. Así, pegar una lista de precios con otro formato no
+  // deja la app sin productos.
+  function listaCruda() {
+    if (typeof CATALOGO !== "undefined" && CATALOGO instanceof Array) return CATALOGO;
+    if (typeof catalogo !== "undefined" && catalogo instanceof Array) return catalogo;
+    if (typeof PRODUCTOS !== "undefined" && PRODUCTOS instanceof Array) return PRODUCTOS;
+    return null;
+  }
+
+  var cacheOrigen = null, cacheLista = [];
+  function productos() {
+    var cruda = listaCruda();
+    if (!cruda) return [];
+    if (cruda === cacheOrigen) return cacheLista;   // se llama en cada tecla
+
+    cacheOrigen = cruda;
+    cacheLista = [];
+    for (var i = 0; i < cruda.length; i++) {
+      var p = cruda[i] || {};
+      var nombre = limpio(p.nombre);
+      if (!nombre) continue;
+      var precio = p.precioUnitario;
+      if (typeof precio !== "number") precio = p.precio;
+      cacheLista.push({ nombre: nombre, precioUnitario: num(precio) });
+    }
+    return cacheLista;
+  }
 
   var nf = new Intl.NumberFormat("es-AR", {
     minimumFractionDigits: 2,
@@ -82,12 +121,6 @@
     var div = document.createElement("div");
     div.className = "linea";
 
-    var opciones = ['<option value="">Elegí un producto…</option>'];
-    for (var i = 0; i < CATALOGO.length; i++) {
-      opciones.push('<option value="' + i + '">' + escapar(CATALOGO[i].nombre) + "</option>");
-    }
-    opciones.push('<option value="' + LIBRE + '">➜ Producto libre (a mano)</option>');
-
     div.innerHTML =
       '<div class="linea-top">' +
         '<span class="n"></span>' +
@@ -96,11 +129,11 @@
       "</div>" +
       '<div class="campo">' +
         '<label for="prod' + id + '">Producto</label>' +
-        '<select id="prod' + id + '" class="sel">' + opciones.join("") + "</select>" +
+        '<select id="prod' + id + '" class="sel">' + opcionesHTML() + "</select>" +
       "</div>" +
       '<div class="campo libre-wrap" hidden>' +
         '<label for="libre' + id + '">Nombre del producto</label>' +
-        '<input id="libre' + id + '" class="libre" type="text" autocomplete="off" placeholder="Ej: Kit de bieletas a medida">' +
+        '<input id="libre' + id + '" class="libre" type="text" autocomplete="off" placeholder="Ej: Cable USB-C 3 m">' +
       "</div>" +
       '<div class="grid-3">' +
         "<div>" +
@@ -128,6 +161,28 @@
     });
   }
 
+  function opcionesHTML() {
+    var lista = productos();
+    var opciones = ['<option value="">Elegí un producto…</option>'];
+    for (var i = 0; i < lista.length; i++) {
+      opciones.push('<option value="' + i + '">' + escapar(lista[i].nombre) + "</option>");
+    }
+    opciones.push('<option value="' + LIBRE + '">➜ Producto libre (a mano)</option>');
+    return opciones.join("");
+  }
+
+  // Se usa si catalogo.js llegó tarde (por ejemplo, después de un reintento de
+  // carga): rearma los desplegables sin perder lo que ya había elegido.
+  function repoblarSelects() {
+    var selects = $("lineas").querySelectorAll(".sel");
+    for (var i = 0; i < selects.length; i++) {
+      var anterior = selects[i].value;
+      selects[i].innerHTML = opcionesHTML();
+      selects[i].value = anterior;
+    }
+    recalcular();
+  }
+
   function renumerar() {
     var filas = $("lineas").querySelectorAll(".linea");
     for (var i = 0; i < filas.length; i++) {
@@ -140,9 +195,10 @@
 
   function leerLinea(div) {
     var sel = div.querySelector(".sel").value;
+    var elegido = sel !== "" && sel !== LIBRE ? productos()[+sel] : null;
     var nombre;
     if (sel === LIBRE) nombre = limpio(div.querySelector(".libre").value);
-    else if (sel !== "") nombre = CATALOGO[+sel].nombre;
+    else if (elegido) nombre = elegido.nombre;
     else nombre = "";
 
     var cantidad = num(div.querySelector(".cant").value);
@@ -178,9 +234,9 @@
       if (v === LIBRE) {
         div.querySelector(".pu").value = "";
         div.querySelector(".libre").focus();
-      } else if (v !== "") {
+      } else if (v !== "" && productos()[+v]) {
         // El precio del catálogo se autocompleta, pero queda editable.
-        div.querySelector(".pu").value = CATALOGO[+v].precioUnitario;
+        div.querySelector(".pu").value = productos()[+v].precioUnitario;
       }
       e.target.classList.remove("invalido");
       recalcular();
@@ -226,6 +282,7 @@
 
   function validar() {
     var faltante = null;
+    if (!$("lineas").querySelectorAll(".linea").length) crearLinea();
 
     ["fecha", "cliente"].forEach(function (campo) {
       var el = $(campo);
@@ -360,11 +417,12 @@
     return y + 8 + altoPanel;
   }
 
-  // Geometría de la tabla
+  // Geometría de la tabla. Las columnas de plata están dimensionadas para
+  // importes de 8 cifras ("$ 35.103.492,00") sin que se toquen entre sí.
   var COL_PROD = M + 4;        // 22
-  var COL_PROD_W = 84;
-  var COL_CANT = 118;          // centrado
-  var COL_PU = 158;            // alineado a la derecha
+  var COL_PROD_W = 74;
+  var COL_CANT = 106;          // centrado
+  var COL_PU = 146;            // alineado a la derecha
   var COL_SUB = DER - 4;       // 188, alineado a la derecha
 
   function cabeceraTabla(doc, y) {
@@ -466,7 +524,7 @@
    * del cliente y la interna: el contenido es idéntico.
    */
   function crearRemito(datos, conFirma) {
-    var doc = new jsPDF({ unit: "mm", format: "a4" });
+    var doc = new (obtenerJsPDF())({ unit: "mm", format: "a4" });
     var y = encabezado(doc);
     y = bloqueDatos(doc, y, datos);
     y = tablaProductos(doc, y + 10, datos.items);
@@ -495,7 +553,17 @@
     setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
   }
 
+  // Si la librería de PDF no está cargada (se cortó la bajada), se reintenta
+  // acá mismo y recién después se arma el remito.
   function generar() {
+    if (!obtenerJsPDF()) {
+      avisar("Cargando la librería de PDF…");
+      cargarJsPDF(function (ok) {
+        if (ok) generar();
+        else avisar("No se pudo cargar la librería de PDF. Revisá la conexión y recargá la app.", true);
+      });
+      return;
+    }
     if (!validar()) return;
 
     var datos = leerFormulario();
@@ -530,6 +598,18 @@
     bajarTodo(archivos);
   }
 
+  var cargandoJsPDF = false;
+  function cargarJsPDF(cb) {
+    if (obtenerJsPDF()) return cb(true);
+    if (cargandoJsPDF) return;
+    cargandoJsPDF = true;
+    var s = document.createElement("script");
+    s.src = "vendor/jspdf.umd.min.js?reintento=" + Date.now();
+    s.onload = function () { cargandoJsPDF = false; cb(!!obtenerJsPDF()); };
+    s.onerror = function () { cargandoJsPDF = false; cb(false); };
+    document.body.appendChild(s);
+  }
+
   function bajarTodo(archivos) {
     descargar(archivos[0].blob, archivos[0].nombre);
     // Chrome Android encadena mejor la segunda descarga con un respiro.
@@ -551,9 +631,37 @@
     $(campo).addEventListener("input", function () { this.classList.remove("invalido"); });
   });
 
+  // Enganche para el vigía de index.html: si un archivo se cayó y el reintento
+  // lo trajo, la app se acomoda sola sin que haya que recargar.
+  window.ZR = window.ZR || {};
+  window.ZR.archivoRecuperado = function (archivo) {
+    if (archivo === "catalogo.js") repoblarSelects();
+    return true;
+  };
+
+  if (!productos().length) {
+    avisar("El catálogo no cargó. Podés usar “Producto libre” o recargar la app.", true);
+  }
+
+  $("version").textContent = "versión " + VERSION_APP;
+  window.ZR.version = VERSION_APP;
+
   if ("serviceWorker" in navigator) {
+    // Si ya había un service worker controlando la página y aparece uno nuevo,
+    // significa que se publicó una versión nueva: se recarga una sola vez para
+    // que el teléfono no siga mostrando la vieja.
+    var teniaControlador = !!navigator.serviceWorker.controller;
+    var yaRecargue = false;
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (!teniaControlador || yaRecargue) return;
+      yaRecargue = true;
+      location.reload();
+    });
+
     window.addEventListener("load", function () {
-      navigator.serviceWorker.register("sw.js").catch(function () {});
+      navigator.serviceWorker.register("sw.js").then(function (reg) {
+        reg.update();
+      }).catch(function () {});
     });
   }
 })();

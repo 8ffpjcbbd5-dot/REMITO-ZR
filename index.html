@@ -161,9 +161,92 @@
   #aviso.error{border-color:var(--error)}
 
   .nota{color:var(--muted);font-size:12px;margin:14px 4px 0;text-align:center}
+  #version{display:inline-block;margin-top:6px;color:#6a6a6a;font-size:11px;letter-spacing:1px}
+
+  /* --- cartel de falla de carga --- */
+  #fallo{
+    position:sticky;top:0;z-index:30;
+    background:#3a1512;border-bottom:1px solid var(--error);
+    color:#ffd9d4;
+    padding:12px 16px;
+    font-size:14px;
+    display:flex;align-items:center;gap:12px;
+  }
+  #fallo[hidden]{display:none}
+  #fallo span{flex:1}
+  #fallo button{
+    flex:0 0 auto;
+    background:var(--error);border:none;border-radius:8px;
+    color:#2a0d0a;font-weight:700;font-family:inherit;font-size:14px;
+    padding:8px 12px;
+  }
 </style>
 </head>
 <body>
+
+<div id="fallo" hidden>
+  <span id="falloTexto"></span>
+  <button type="button" id="falloRecargar">Recargar</button>
+</div>
+
+<script>
+/*
+ * Vigía de carga. Va inline y primero para que nada dependa de que baje otro
+ * archivo: si un script no llega (señal mala, bajada cortada), lo reintenta una
+ * vez y avisa en pantalla. Sin esto, un archivo caído deja la app muda: el
+ * formulario se ve, pero ningún botón hace nada.
+ */
+(function () {
+  var reintentados = {};
+  window.ZR = window.ZR || {};
+  window.ZR.errores = [];
+
+  function cartel(texto, conBotonRecargar) {
+    var caja = document.getElementById("fallo");
+    document.getElementById("falloTexto").textContent = texto;
+    document.getElementById("falloRecargar").hidden = !conBotonRecargar;
+    caja.hidden = false;
+  }
+
+  function ocultarCartel() {
+    document.getElementById("fallo").hidden = true;
+  }
+
+  document.getElementById("falloRecargar").addEventListener("click", function () {
+    location.reload();
+  });
+
+  // En captura: los errores de carga de recursos no burbujean hasta window.
+  window.addEventListener("error", function (e) {
+    var t = e.target;
+    if (t && t.tagName === "SCRIPT" && t.src) {
+      var archivo = t.src.split("/").pop().split("?")[0];
+      window.ZR.errores.push(archivo);
+      if (reintentados[archivo]) {
+        cartel("No se pudo cargar " + archivo + ". Revisá la conexión y recargá.", true);
+        return;
+      }
+      reintentados[archivo] = true;
+      cartel("Reintentando cargar " + archivo + "…", false);
+      var s = document.createElement("script");
+      s.src = t.src.split("?")[0] + "?reintento=" + Date.now();
+      s.onload = function () {
+        ocultarCartel();
+        if (window.ZR.archivoRecuperado) window.ZR.archivoRecuperado(archivo);
+      };
+      s.onerror = function () {
+        cartel("No se pudo cargar " + archivo + ". Revisá la conexión y recargá.", true);
+      };
+      document.body.appendChild(s);
+      return;
+    }
+    if (e.message) {
+      window.ZR.errores.push(e.message);
+      cartel("Error: " + e.message, true);
+    }
+  }, true);
+})();
+</script>
 
 <header>
   <img id="logo" src="assets/logo.png" alt="Zona Race">
@@ -203,6 +286,7 @@
   <p class="nota">
     Se generan dos PDF: uno para el cliente (con espacio de firma) y uno interno.
     No se guarda nada en el teléfono.
+    <br><span id="version">versión ?</span>
   </p>
 </main>
 
