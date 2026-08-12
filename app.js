@@ -20,8 +20,34 @@
     return (window.jspdf && window.jspdf.jsPDF) || null;
   }
 
-  function catalogo() {
-    return (typeof CATALOGO !== "undefined" && CATALOGO instanceof Array) ? CATALOGO : [];
+  // Lee el catálogo aguantando las formas más comunes de pegarlo: la lista puede
+  // llamarse CATALOGO, catalogo o PRODUCTOS, y el precio puede venir como
+  // precioUnitario o precio. Así, pegar una lista de precios con otro formato no
+  // deja la app sin productos.
+  function listaCruda() {
+    if (typeof CATALOGO !== "undefined" && CATALOGO instanceof Array) return CATALOGO;
+    if (typeof catalogo !== "undefined" && catalogo instanceof Array) return catalogo;
+    if (typeof PRODUCTOS !== "undefined" && PRODUCTOS instanceof Array) return PRODUCTOS;
+    return null;
+  }
+
+  var cacheOrigen = null, cacheLista = [];
+  function productos() {
+    var cruda = listaCruda();
+    if (!cruda) return [];
+    if (cruda === cacheOrigen) return cacheLista;   // se llama en cada tecla
+
+    cacheOrigen = cruda;
+    cacheLista = [];
+    for (var i = 0; i < cruda.length; i++) {
+      var p = cruda[i] || {};
+      var nombre = limpio(p.nombre);
+      if (!nombre) continue;
+      var precio = p.precioUnitario;
+      if (typeof precio !== "number") precio = p.precio;
+      cacheLista.push({ nombre: nombre, precioUnitario: num(precio) });
+    }
+    return cacheLista;
   }
 
   var nf = new Intl.NumberFormat("es-AR", {
@@ -136,7 +162,7 @@
   }
 
   function opcionesHTML() {
-    var lista = catalogo();
+    var lista = productos();
     var opciones = ['<option value="">Elegí un producto…</option>'];
     for (var i = 0; i < lista.length; i++) {
       opciones.push('<option value="' + i + '">' + escapar(lista[i].nombre) + "</option>");
@@ -169,7 +195,7 @@
 
   function leerLinea(div) {
     var sel = div.querySelector(".sel").value;
-    var elegido = sel !== "" && sel !== LIBRE ? catalogo()[+sel] : null;
+    var elegido = sel !== "" && sel !== LIBRE ? productos()[+sel] : null;
     var nombre;
     if (sel === LIBRE) nombre = limpio(div.querySelector(".libre").value);
     else if (elegido) nombre = elegido.nombre;
@@ -208,9 +234,9 @@
       if (v === LIBRE) {
         div.querySelector(".pu").value = "";
         div.querySelector(".libre").focus();
-      } else if (v !== "" && catalogo()[+v]) {
+      } else if (v !== "" && productos()[+v]) {
         // El precio del catálogo se autocompleta, pero queda editable.
-        div.querySelector(".pu").value = catalogo()[+v].precioUnitario;
+        div.querySelector(".pu").value = productos()[+v].precioUnitario;
       }
       e.target.classList.remove("invalido");
       recalcular();
@@ -613,7 +639,7 @@
     return true;
   };
 
-  if (!catalogo().length) {
+  if (!productos().length) {
     avisar("El catálogo no cargó. Podés usar “Producto libre” o recargar la app.", true);
   }
 

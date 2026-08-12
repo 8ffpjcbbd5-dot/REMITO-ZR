@@ -9,6 +9,10 @@
  * "codigo" es de referencia interna: hoy no se muestra ni en la app ni en el
  * remito, que usan "nombre" y "precioUnitario".
  *
+ * Si pegás una lista con otro formato, la app igual la entiende: acepta que se
+ * llame CATALOGO, catalogo o PRODUCTOS, y que el precio venga como
+ * "precioUnitario" o como "precio".
+ *
  * Acordate de subir la VERSION en sw.js cada vez que toques este archivo, así
  * los celulares que ya tienen la app instalada se actualizan.
  */
