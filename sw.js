@@ -7,7 +7,7 @@
  * Si cambiás algún archivo de la app (por ejemplo catalogo.js), subí el número
  * de VERSION para que los teléfonos ya instalados se actualicen.
  */
-var VERSION = "zr-remitos-v2";
+var VERSION = "zr-remitos-v3";
 
 var ARCHIVOS = [
   "./",
@@ -49,8 +49,10 @@ self.addEventListener("activate", function (e) {
 self.addEventListener("fetch", function (e) {
   if (e.request.method !== "GET") return;
 
+  // ignoreSearch: los reintentos de carga piden "archivo.js?reintento=123";
+  // sin esto no encontrarían la copia en caché y fallarían sin conexión.
   e.respondWith(
-    caches.match(e.request).then(function (hit) {
+    caches.match(e.request, { ignoreSearch: true }).then(function (hit) {
       if (hit) return hit;
       return fetch(e.request).then(function (res) {
         // Guardamos copia de lo que sea de la propia app.

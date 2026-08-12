@@ -5,11 +5,20 @@
 (function () {
   "use strict";
 
-  var jsPDF = window.jspdf.jsPDF;
-
   // ---------------------------------------------------------------- utilidades
 
   function $(id) { return document.getElementById(id); }
+
+  // jsPDF y el catálogo se buscan cuando hacen falta, nunca al arrancar: si uno
+  // de esos archivos no llegó a bajar (señal mala, por ejemplo), el formulario
+  // tiene que seguir funcionando igual.
+  function obtenerJsPDF() {
+    return (window.jspdf && window.jspdf.jsPDF) || null;
+  }
+
+  function catalogo() {
+    return (typeof CATALOGO !== "undefined" && CATALOGO instanceof Array) ? CATALOGO : [];
+  }
 
   var nf = new Intl.NumberFormat("es-AR", {
     minimumFractionDigits: 2,
@@ -82,12 +91,6 @@
     var div = document.createElement("div");
     div.className = "linea";
 
-    var opciones = ['<option value="">Elegí un producto…</option>'];
-    for (var i = 0; i < CATALOGO.length; i++) {
-      opciones.push('<option value="' + i + '">' + escapar(CATALOGO[i].nombre) + "</option>");
-    }
-    opciones.push('<option value="' + LIBRE + '">➜ Producto libre (a mano)</option>');
-
     div.innerHTML =
       '<div class="linea-top">' +
         '<span class="n"></span>' +
@@ -96,7 +99,7 @@
       "</div>" +
       '<div class="campo">' +
         '<label for="prod' + id + '">Producto</label>' +
-        '<select id="prod' + id + '" class="sel">' + opciones.join("") + "</select>" +
+        '<select id="prod' + id + '" class="sel">' + opcionesHTML() + "</select>" +
       "</div>" +
       '<div class="campo libre-wrap" hidden>' +
         '<label for="libre' + id + '">Nombre del producto</label>' +
@@ -128,6 +131,28 @@
     });
   }
 
+  function opcionesHTML() {
+    var lista = catalogo();
+    var opciones = ['<option value="">Elegí un producto…</option>'];
+    for (var i = 0; i < lista.length; i++) {
+      opciones.push('<option value="' + i + '">' + escapar(lista[i].nombre) + "</option>");
+    }
+    opciones.push('<option value="' + LIBRE + '">➜ Producto libre (a mano)</option>');
+    return opciones.join("");
+  }
+
+  // Se usa si catalogo.js llegó tarde (por ejemplo, después de un reintento de
+  // carga): rearma los desplegables sin perder lo que ya había elegido.
+  function repoblarSelects() {
+    var selects = $("lineas").querySelectorAll(".sel");
+    for (var i = 0; i < selects.length; i++) {
+      var anterior = selects[i].value;
+      selects[i].innerHTML = opcionesHTML();
+      selects[i].value = anterior;
+    }
+    recalcular();
+  }
+
   function renumerar() {
     var filas = $("lineas").querySelectorAll(".linea");
     for (var i = 0; i < filas.length; i++) {
@@ -140,9 +165,10 @@
 
   function leerLinea(div) {
     var sel = div.querySelector(".sel").value;
+    var elegido = sel !== "" && sel !== LIBRE ? catalogo()[+sel] : null;
     var nombre;
     if (sel === LIBRE) nombre = limpio(div.querySelector(".libre").value);
-    else if (sel !== "") nombre = CATALOGO[+sel].nombre;
+    else if (elegido) nombre = elegido.nombre;
     else nombre = "";
 
     var cantidad = num(div.querySelector(".cant").value);
@@ -178,9 +204,9 @@
       if (v === LIBRE) {
         div.querySelector(".pu").value = "";
         div.querySelector(".libre").focus();
-      } else if (v !== "") {
+      } else if (v !== "" && catalogo()[+v]) {
         // El precio del catálogo se autocompleta, pero queda editable.
-        div.querySelector(".pu").value = CATALOGO[+v].precioUnitario;
+        div.querySelector(".pu").value = catalogo()[+v].precioUnitario;
       }
       e.target.classList.remove("invalido");
       recalcular();
@@ -226,6 +252,7 @@
 
   function validar() {
     var faltante = null;
+    if (!$("lineas").querySelectorAll(".linea").length) crearLinea();
 
     ["fecha", "cliente"].forEach(function (campo) {
       var el = $(campo);
@@ -467,7 +494,7 @@
    * del cliente y la interna: el contenido es idéntico.
    */
   function crearRemito(datos, conFirma) {
-    var doc = new jsPDF({ unit: "mm", format: "a4" });
+    var doc = new (obtenerJsPDF())({ unit: "mm", format: "a4" });
     var y = encabezado(doc);
     y = bloqueDatos(doc, y, datos);
     y = tablaProductos(doc, y + 10, datos.items);
@@ -496,7 +523,17 @@
     setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
   }
 
+  // Si la librería de PDF no está cargada (se cortó la bajada), se reintenta
+  // acá mismo y recién después se arma el remito.
   function generar() {
+    if (!obtenerJsPDF()) {
+      avisar("Cargando la librería de PDF…");
+      cargarJsPDF(function (ok) {
+        if (ok) generar();
+        else avisar("No se pudo cargar la librería de PDF. Revisá la conexión y recargá la app.", true);
+      });
+      return;
+    }
     if (!validar()) return;
 
     var datos = leerFormulario();
@@ -531,6 +568,18 @@
     bajarTodo(archivos);
   }
 
+  var cargandoJsPDF = false;
+  function cargarJsPDF(cb) {
+    if (obtenerJsPDF()) return cb(true);
+    if (cargandoJsPDF) return;
+    cargandoJsPDF = true;
+    var s = document.createElement("script");
+    s.src = "vendor/jspdf.umd.min.js?reintento=" + Date.now();
+    s.onload = function () { cargandoJsPDF = false; cb(!!obtenerJsPDF()); };
+    s.onerror = function () { cargandoJsPDF = false; cb(false); };
+    document.body.appendChild(s);
+  }
+
   function bajarTodo(archivos) {
     descargar(archivos[0].blob, archivos[0].nombre);
     // Chrome Android encadena mejor la segunda descarga con un respiro.
@@ -551,6 +600,18 @@
   ["fecha", "cliente"].forEach(function (campo) {
     $(campo).addEventListener("input", function () { this.classList.remove("invalido"); });
   });
+
+  // Enganche para el vigía de index.html: si un archivo se cayó y el reintento
+  // lo trajo, la app se acomoda sola sin que haya que recargar.
+  window.ZR = window.ZR || {};
+  window.ZR.archivoRecuperado = function (archivo) {
+    if (archivo === "catalogo.js") repoblarSelects();
+    return true;
+  };
+
+  if (!catalogo().length) {
+    avisar("El catálogo no cargó. Podés usar “Producto libre” o recargar la app.", true);
+  }
 
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", function () {
