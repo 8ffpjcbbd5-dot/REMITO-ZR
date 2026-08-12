@@ -7,7 +7,7 @@
  * Si cambiás algún archivo de la app (por ejemplo catalogo.js), subí el número
  * de VERSION para que los teléfonos ya instalados se actualicen.
  */
-var VERSION = "zr-remitos-v1";
+var VERSION = "zr-remitos-v2";
 
 var ARCHIVOS = [
   "./",

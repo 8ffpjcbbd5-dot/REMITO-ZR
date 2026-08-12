@@ -100,7 +100,7 @@
       "</div>" +
       '<div class="campo libre-wrap" hidden>' +
         '<label for="libre' + id + '">Nombre del producto</label>' +
-        '<input id="libre' + id + '" class="libre" type="text" autocomplete="off" placeholder="Ej: Kit de bieletas a medida">' +
+        '<input id="libre' + id + '" class="libre" type="text" autocomplete="off" placeholder="Ej: Cable USB-C 3 m">' +
       "</div>" +
       '<div class="grid-3">' +
         "<div>" +
@@ -360,11 +360,12 @@
     return y + 8 + altoPanel;
   }
 
-  // Geometría de la tabla
+  // Geometría de la tabla. Las columnas de plata están dimensionadas para
+  // importes de 8 cifras ("$ 35.103.492,00") sin que se toquen entre sí.
   var COL_PROD = M + 4;        // 22
-  var COL_PROD_W = 84;
-  var COL_CANT = 118;          // centrado
-  var COL_PU = 158;            // alineado a la derecha
+  var COL_PROD_W = 74;
+  var COL_CANT = 106;          // centrado
+  var COL_PU = 146;            // alineado a la derecha
   var COL_SUB = DER - 4;       // 188, alineado a la derecha
 
   function cabeceraTabla(doc, y) {

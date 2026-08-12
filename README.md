@@ -47,11 +47,12 @@ npx http-server -p 8123
 Todo el catálogo está en **`catalogo.js`**, en una lista fácil de tocar a mano:
 
 ```js
-{ nombre: "Filtro de aceite", precioUnitario: 9800 },
+{ codigo: "R9", nombre: "Base R9 V3 Direct Drive Wheel Base", precioUnitario: 837807 },
 ```
 
 El precio va sin `$`, sin puntos de miles y con punto decimal (`12345.50`). El
-orden de la lista es el orden del desplegable.
+orden de la lista es el orden del desplegable. El `codigo` es de referencia
+interna: la app y el remito muestran `nombre` y `precioUnitario`.
 
 **Importante:** después de cambiar cualquier archivo de la app, subí el número de
 `VERSION` en `sw.js` (`zr-remitos-v1` → `zr-remitos-v2`). Si no, los teléfonos que
